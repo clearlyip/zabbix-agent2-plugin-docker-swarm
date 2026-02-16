@@ -7,6 +7,7 @@ SRC_DIR="$ROOT_DIR/src"
 DIST_DIR="$ROOT_DIR/dist"
 PKG_NAME="zabbix-agent2-plugin-docker-swarm"
 UPLOAD_URL="https://repomanager.mke.clearlyip.net/api/v2/snapshot/25/upload"
+REBUILD_URL="https://repomanager.mke.clearlyip.net/api/v2/snapshot/25/rebuild"
 
 usage() {
 	cat <<'USAGE'
@@ -154,9 +155,19 @@ if [ "$UPLOAD" -eq 1 ]; then
 		exit 1
 	fi
 
-	curl -fS --retry 3 --retry-delay 2 \
-		-H "X-API-Key: $RM_API_KEY" \
-		-F "file=@${OUT_DEB}" \
+	DEB_NAME=$(basename "$OUT_DEB")
+	cp "$OUT_DEB" "/tmp/$DEB_NAME"
+
+	curl -L --post301 -s -q -X POST \
+		-H "Authorization: Bearer ${RM_API_KEY}" \
+		-F "files=@/tmp/${DEB_NAME}" \
 		"$UPLOAD_URL"
-	printf '\nUploaded to %s\n' "$UPLOAD_URL"
+
+	curl -L -s -q -X PUT \
+		-H "Authorization: Bearer ${RM_API_KEY}" \
+		-H "Content-Type: application/json" \
+		-d '{"gpgSign":"true"}' \
+		"$REBUILD_URL"
+
+	printf '\nUploaded to %s and rebuild triggered at %s\n' "$UPLOAD_URL" "$REBUILD_URL"
 fi
