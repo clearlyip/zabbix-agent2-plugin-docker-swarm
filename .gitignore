@@ -15,4 +15,7 @@ Thumbs.db
 *~
 
 # Logs
-*.log 
+*.log
+
+# Build artifacts
+dist/

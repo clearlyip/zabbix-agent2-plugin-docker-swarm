@@ -52,6 +52,45 @@ make build
 Download the latest release from the 
   [Releases](https://github.com/toontoet/zabbix-agent2-plugin-docker-swarm/releases) page.
 
+### Debian package (build + optional upload)
+
+Build a `.deb` that installs the binary to `/var/lib/zabbix/plugins/docker-swarm`.
+
+Requirements:
+- `dpkg-deb` and `curl` available on the build host
+
+Build and upload:
+
+```bash
+# Ensure API key is available for upload
+echo 'RM_API_KEY=your-key-here' > ~/.repomanager
+chmod 600 ~/.repomanager
+
+# Build for current architecture and upload
+scripts/build-deb.sh
+```
+
+Build only (no upload):
+
+```bash
+scripts/build-deb.sh --no-upload
+```
+
+Build for a specific architecture:
+
+```bash
+scripts/build-deb.sh --arch amd64
+scripts/build-deb.sh --arch arm64
+```
+
+Release flow (build + package + upload):
+
+```bash
+scripts/release.sh
+scripts/release.sh --arch amd64
+scripts/release.sh --arch arm64 --no-upload
+```
+
 ### 2. Install Plugin
 
 ```bash

@@ -29,6 +29,60 @@ print_error() {
     echo -e "${RED}[ERROR]${NC} $1"
 }
 
+usage() {
+    cat <<'USAGE'
+Usage: scripts/release.sh [--arch <amd64|arm64>] [--no-upload]
+
+Options:
+  --arch <amd64|arm64>  Build and package only the specified architecture.
+  --no-upload           Build Debian packages without uploading them.
+USAGE
+}
+
+RELEASE_ARCH=""
+BUILD_TARGET="build-all"
+DEB_ARCHES=("amd64" "arm64")
+DEB_UPLOAD_ARGS=()
+
+while [ "$#" -gt 0 ]; do
+    case "$1" in
+        --arch)
+            RELEASE_ARCH="$2"
+            shift 2
+            ;;
+        --no-upload)
+            DEB_UPLOAD_ARGS=(--no-upload)
+            shift
+            ;;
+        -h|--help)
+            usage
+            exit 0
+            ;;
+        *)
+            print_error "Unknown argument: $1"
+            usage
+            exit 1
+            ;;
+    esac
+done
+
+if [ -n "$RELEASE_ARCH" ]; then
+    case "$RELEASE_ARCH" in
+        amd64|x86_64)
+            BUILD_TARGET="build-x86_64"
+            DEB_ARCHES=("amd64")
+            ;;
+        arm64|aarch64)
+            BUILD_TARGET="build-arm64"
+            DEB_ARCHES=("arm64")
+            ;;
+        *)
+            print_error "Unsupported architecture: $RELEASE_ARCH"
+            exit 1
+            ;;
+    esac
+fi
+
 # Check if we're in the right directory
 if [ ! -f "src/main.go" ] || [ ! -f "README.md" ]; then
     print_error "Please run this script from the project root directory"
@@ -103,10 +157,17 @@ grep "PLUGIN_VERSION" src/main.go
 print_info "Building plugin to verify changes..."
 cd src
 make clean
-make build-all
+make "$BUILD_TARGET"
 cd ..
 
 print_success "Build successful!"
+
+print_info "Building Debian package(s)..."
+for deb_arch in "${DEB_ARCHES[@]}"; do
+    scripts/build-deb.sh --arch "$deb_arch" "${DEB_UPLOAD_ARGS[@]}"
+done
+
+print_success "Debian package build(s) successful!"
 
 # Commit changes
 print_info "Committing version changes..."
